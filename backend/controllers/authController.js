@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { sendWelcomeEmail } = require('../utils/emailService');
 
 // @desc    Register a new user
 // @route   POST /api/auth/register
@@ -27,6 +28,10 @@ exports.registerUser = async (req, res) => {
     });
 
     await user.save();
+
+    // Send welcome email (fire-and-forget — never blocks the response)
+    sendWelcomeEmail({ name: user.name, email: user.email, role: user.role })
+      .catch((err) => console.error('Welcome email failed:', err.message));
 
     // Create token
     const token = jwt.sign(

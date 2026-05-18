@@ -1,5 +1,11 @@
 const Application = require('../models/Application');
 const Job = require('../models/Job');
+const User = require('../models/User');
+const {
+  sendApplicationConfirmation,
+  sendNewApplicantAlert,
+  sendStatusUpdateEmail,
+} = require('../utils/emailService');
 
 // @desc    Apply for a job
 // @route   POST /api/applications
@@ -29,6 +35,26 @@ exports.applyForJob = async (req, res) => {
       applicant: req.user.id,
       resumeUrl
     });
+
+    // ── Email: confirm to student + alert recruiter ──────────
+    const recruiter = await User.findById(job.recruiter).select('name email');
+    const student   = req.user; // attached by authMiddleware
+
+    sendApplicationConfirmation({
+      studentName:  student.name,
+      studentEmail: student.email,
+      jobTitle:     job.title,
+      company:      job.company,
+    }).catch((err) => console.error('Application confirmation email failed:', err.message));
+
+    if (recruiter) {
+      sendNewApplicantAlert({
+        recruiterEmail: recruiter.email,
+        recruiterName:  recruiter.name,
+        studentName:    student.name,
+        jobTitle:       job.title,
+      }).catch((err) => console.error('New applicant alert email failed:', err.message));
+    }
 
     res.status(201).json(application);
   } catch (error) {
@@ -103,6 +129,18 @@ exports.updateApplicationStatus = async (req, res) => {
 
     application.status = status;
     await application.save();
+
+    // ── Email: notify student of status change ───────────────
+    const student = await User.findById(application.applicant).select('name email');
+    if (student) {
+      sendStatusUpdateEmail({
+        studentName:  student.name,
+        studentEmail: student.email,
+        jobTitle:     application.job.title,
+        company:      application.job.company,
+        status,
+      }).catch((err) => console.error('Status update email failed:', err.message));
+    }
 
     res.status(200).json(application);
   } catch (error) {
