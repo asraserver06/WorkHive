@@ -30,9 +30,7 @@ export default function ResumeAnalyzerPage() {
       const formData = new FormData();
       formData.append('resume', file);
       if (jobDescription.trim()) formData.append('jobDescription', jobDescription.trim());
-      const { data } = await api.post('/resume/analyze', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const { data } = await api.post('/resume/analyze', formData);
       setResult(data);
       toast.success('Analysis complete! 🎉');
     } catch (err) {
@@ -82,7 +80,7 @@ export default function ResumeAnalyzerPage() {
               <div className="drop-icon">☁️</div>
               <div style={{ fontWeight: '700', fontSize: '16px', marginBottom: '6px' }}>Drop your resume here</div>
               <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>or click to browse — PDF only</div>
-              <button className="btn btn-secondary btn-sm" onClick={e => e.stopPropagation()}>
+              <button className="btn btn-secondary btn-sm" onClick={e => { e.stopPropagation(); fileRef.current?.click(); }}>
                 <Upload size={14} /> Choose File
               </button>
             </div>
