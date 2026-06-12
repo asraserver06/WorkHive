@@ -25,6 +25,8 @@ export default function ChatPage() {
   const [typingName, setTypingName] = useState('');
   const [newRecipient, setNewRecipient] = useState('');
   const [showNew, setShowNew] = useState(false);
+  const [selectedMsg, setSelectedMsg] = useState(null);
+  const [replyingTo, setReplyingTo] = useState(null);
   const socketRef = useRef(null);
   const bottomRef = useRef(null);
   const typingTimer = useRef(null);
@@ -67,6 +69,10 @@ export default function ChatPage() {
       }
     });
 
+    socket.on('messageDeleted', (msgId) => {
+      setMessages(prev => prev.filter(m => m._id !== msgId));
+    });
+
     socket.on('conversationUpdated', (data) => {
       setConversations(prev => prev.map(c =>
         c._id === data.conversationId
@@ -103,6 +109,8 @@ export default function ChatPage() {
       .catch(console.error);
     socketRef.current?.emit('joinConversation', active._id);
     setTyping(false);
+    setSelectedMsg(null);
+    setReplyingTo(null);
   }, [active]);
 
   // Auto scroll
@@ -110,11 +118,38 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, typing]);
 
+  const handleCopy = (txt) => {
+    navigator.clipboard.writeText(txt);
+    toast.success('Message copied!');
+    setSelectedMsg(null);
+  };
+
+  const handleForward = (txt) => {
+    setText(`[Forwarded]: ${txt}`);
+    setSelectedMsg(null);
+    toast.success('Message ready to forward!');
+  };
+
+  const handleReply = (msg) => {
+    setReplyingTo(msg);
+    setSelectedMsg(null);
+  };
+
+  const handleDelete = (msgId) => {
+    socketRef.current?.emit('deleteMessage', { conversationId: active._id, messageId: msgId });
+    setSelectedMsg(null);
+  };
+
   const sendMsg = () => {
     if (!text.trim() || !active) return;
-    socketRef.current?.emit('sendMessage', { conversationId: active._id, text: text.trim() });
+    let finalMsg = text.trim();
+    if (replyingTo) {
+      finalMsg = `[Replying to: "${replyingTo.text}"]\n${finalMsg}`;
+    }
+    socketRef.current?.emit('sendMessage', { conversationId: active._id, text: finalMsg });
     socketRef.current?.emit('stopTyping', { conversationId: active._id });
     setText('');
+    setReplyingTo(null);
   };
 
   const handleTyping = (val) => {
@@ -210,12 +245,37 @@ export default function ChatPage() {
               )}
               {messages.map(msg => {
                 const mine = msg.sender?._id === user.id || msg.sender?._id === user._id || msg.sender === user.id;
+                const isSelected = selectedMsg === msg._id;
                 return (
-                  <div key={msg._id} style={{ display: 'flex', flexDirection: 'column', alignItems: mine ? 'flex-end' : 'flex-start' }}>
+                  <div key={msg._id} style={{ display: 'flex', flexDirection: 'column', alignItems: mine ? 'flex-end' : 'flex-start', marginBottom: isSelected ? '32px' : '0' }}>
                     {!mine && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px', marginLeft: '4px' }}>{msg.sender?.name}</span>}
-                    <div className={`message-bubble ${mine ? 'mine' : 'theirs'}`}>
-                      {msg.text}
-                      <div className="message-time">{formatTime(msg.createdAt)}</div>
+                    
+                    <div style={{ position: 'relative' }}>
+                      <div 
+                        className={`message-bubble ${mine ? 'mine' : 'theirs'}`} 
+                        onClick={() => setSelectedMsg(isSelected ? null : msg._id)}
+                        style={{ cursor: 'pointer', whiteSpace: 'pre-wrap' }}
+                      >
+                        {msg.text}
+                        <div className="message-time">{formatTime(msg.createdAt)}</div>
+                      </div>
+
+                      {/* Context Menu Popup */}
+                      {isSelected && (
+                        <div style={{
+                          position: 'absolute', top: '100%', [mine ? 'right' : 'left']: 0, marginTop: '4px',
+                          background: 'var(--bg-card)', padding: '4px', borderRadius: '8px',
+                          border: '1px solid var(--border-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                          display: 'flex', gap: '4px', zIndex: 10, whiteSpace: 'nowrap'
+                        }}>
+                          <button className="btn btn-ghost btn-sm" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleReply(msg)}>Reply</button>
+                          <button className="btn btn-ghost btn-sm" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleForward(msg.text)}>Forward</button>
+                          <button className="btn btn-ghost btn-sm" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleCopy(msg.text)}>Copy</button>
+                          {mine && (
+                            <button className="btn btn-ghost btn-sm danger" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleDelete(msg._id)}>Delete</button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -233,18 +293,29 @@ export default function ChatPage() {
               <div ref={bottomRef} />
             </div>
 
-            {/* Input */}
-            <div className="chat-input-area">
-              <input
-                className="chat-input"
-                placeholder="Type a message…"
-                value={text}
-                onChange={e => handleTyping(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMsg()}
-              />
-              <button className="btn btn-primary btn-icon" onClick={sendMsg} disabled={!text.trim()}>
-                <Send size={16} />
-              </button>
+            {/* Input Area with Reply Banner */}
+            <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--bg-surface)', borderTop: '1px solid var(--border-color)' }}>
+              {replyingTo && (
+                <div style={{ padding: '8px 16px', background: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    <span style={{ fontWeight: '700', color: 'var(--brand-400)' }}>Replying to: </span>
+                    {replyingTo.text.length > 50 ? replyingTo.text.substring(0, 50) + '...' : replyingTo.text}
+                  </div>
+                  <button className="btn btn-ghost btn-sm" style={{ padding: '2px', height: 'auto' }} onClick={() => setReplyingTo(null)}>✕</button>
+                </div>
+              )}
+              <div className="chat-input-area" style={{ borderTop: 'none' }}>
+                <input
+                  className="chat-input"
+                  placeholder="Type a message…"
+                  value={text}
+                  onChange={e => handleTyping(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMsg()}
+                />
+                <button className="btn btn-primary btn-icon" onClick={sendMsg} disabled={!text.trim()}>
+                  <Send size={16} />
+                </button>
+              </div>
             </div>
           </>
         )}

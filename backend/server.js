@@ -186,6 +186,25 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ── Delete a message ──────────────────────────────────────
+  socket.on('deleteMessage', async ({ conversationId, messageId }) => {
+    try {
+      const msg = await Message.findById(messageId);
+      if (!msg) return;
+
+      // Only the sender can delete the message
+      if (msg.sender.toString() !== userId) {
+        return socket.emit('error', { message: 'Not authorized to delete this message' });
+      }
+
+      await Message.findByIdAndDelete(messageId);
+      io.to(conversationId).emit('messageDeleted', messageId);
+    } catch (err) {
+      console.error('deleteMessage error:', err);
+      socket.emit('error', { message: 'Failed to delete message' });
+    }
+  });
+
   // ── Typing indicators ─────────────────────────────────────
   socket.on('typing', ({ conversationId }) => {
     socket.to(conversationId).emit('userTyping', {
