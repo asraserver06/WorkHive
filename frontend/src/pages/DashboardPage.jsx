@@ -102,12 +102,13 @@ function StudentDashboard() {
 }
 
 // ── Recruiter Dashboard ────────────────────────────────────────
-function RecruiterDashboard() {
+function RecruiterDashboard({ user }) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ title: '', description: '', company: '', location: '', skillsRequired: '', salary: '', jobType: 'Full-time' });
   const [submitting, setSubmitting] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     api.get('/jobs').then(r => setJobs(r.data)).finally(() => setLoading(false));
@@ -145,7 +146,7 @@ function RecruiterDashboard() {
 
   if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
 
-  const myJobs = jobs; // already filtered by backend since recruiter only created theirs
+  const myJobs = jobs.filter(j => j.recruiter?._id === user?.id || j.recruiter === user?.id);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -230,6 +231,12 @@ function RecruiterDashboard() {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 {job.status === 'Open' ? <span className="badge badge-success">Open</span> : <span className="badge badge-neutral">Closed</span>}
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  onClick={() => navigate(`/jobs/${job._id}`)}
+                >
+                  View Applicants
+                </button>
                 <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(job._id)} title="Delete"><Trash2 size={14} /></button>
               </div>
             </div>
@@ -254,7 +261,7 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {user?.role === 'student' ? <StudentDashboard /> : <RecruiterDashboard />}
+      {user?.role === 'student' ? <StudentDashboard /> : <RecruiterDashboard user={user} />}
     </div>
   );
 }
