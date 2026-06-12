@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const fs = require('fs');
-const { analyzeResume } = require('../controllers/resumeController');
+const { analyzeResume, getResume } = require('../controllers/resumeController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
 // Ensure uploads directory exists
@@ -11,15 +11,8 @@ if (!fs.existsSync(uploadDir)){
     fs.mkdirSync(uploadDir);
 }
 
-// Configure Multer for PDF uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/');
-  },
-  filename: function (req, file, cb) {
-    cb(null, `${req.user.id}-${Date.now()}.pdf`);
-  }
-});
+// Configure Multer for PDF uploads using memory storage
+const storage = multer.memoryStorage();
 
 const upload = multer({ 
   storage,
@@ -32,6 +25,8 @@ const upload = multer({
   }
 });
 
+
 router.post('/analyze', protect, authorize('student'), upload.single('resume'), analyzeResume);
+router.get('/download/:fileId', getResume);
 
 module.exports = router;
