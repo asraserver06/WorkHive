@@ -18,6 +18,10 @@ const applicationSchema = new mongoose.Schema({
     type: String,
     enum: ['Applied', 'Under Review', 'Interview', 'Rejected', 'Offered'],
     default: 'Applied'
+  },
+  isRevealed: {
+    type: Boolean,
+    default: false
   }
 }, { timestamps: true });
 
