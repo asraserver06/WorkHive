@@ -29,6 +29,13 @@ export default function ChatPage() {
   const bottomRef = useRef(null);
   const typingTimer = useRef(null);
 
+  const activeRef = useRef(null);
+
+  // Sync active state to ref for use inside socket callbacks
+  useEffect(() => {
+    activeRef.current = active;
+  }, [active]);
+
   // Connect socket
   useEffect(() => {
     const socket = io(SOCKET_URL, { auth: { token } });
@@ -39,11 +46,31 @@ export default function ChatPage() {
     });
 
     socket.on('newMessage', (msg) => {
-      setMessages(prev => [...prev, msg]);
-      // Update conversation last message
+      // Only append if it's for the currently active conversation
+      if (activeRef.current?._id === msg.conversation) {
+        setMessages(prev => [...prev, msg]);
+        
+        // Let the server know we read it implicitly if we are in the room, 
+        // but for now we just keep the unread count at 0 locally.
+        setConversations(prev => prev.map(c =>
+          c._id === msg.conversation
+            ? { ...c, lastMessage: msg.text, lastMessageAt: msg.createdAt, unreadCount: 0 }
+            : c
+        ));
+      } else {
+        // It's for a background conversation, increment unread count
+        setConversations(prev => prev.map(c =>
+          c._id === msg.conversation
+            ? { ...c, lastMessage: msg.text, lastMessageAt: msg.createdAt, unreadCount: (c.unreadCount || 0) + 1 }
+            : c
+        ));
+      }
+    });
+
+    socket.on('conversationUpdated', (data) => {
       setConversations(prev => prev.map(c =>
-        c._id === msg.conversation
-          ? { ...c, lastMessage: msg.text, lastMessageAt: msg.createdAt }
+        c._id === data.conversationId
+          ? { ...c, lastMessage: data.lastMessage, lastMessageAt: data.lastMessageAt, unreadCount: (c.unreadCount || 0) + 1 }
           : c
       ));
     });
@@ -66,7 +93,13 @@ export default function ChatPage() {
   useEffect(() => {
     if (!active) return;
     api.get(`/chat/conversations/${active._id}/messages`)
-      .then(r => setMessages(r.data))
+      .then(r => {
+        setMessages(r.data);
+        // Clear unread count locally when opened
+        setConversations(prev => prev.map(c => 
+          c._id === active._id ? { ...c, unreadCount: 0 } : c
+        ));
+      })
       .catch(console.error);
     socketRef.current?.emit('joinConversation', active._id);
     setTyping(false);
@@ -130,9 +163,18 @@ export default function ChatPage() {
                 className={`conversation-item${active?._id === conv._id ? ' active' : ''}`}
                 onClick={() => setActive(conv)}>
                 <div className="conv-avatar">{initials(o?.name || '?')}</div>
-                <div className="conv-info">
-                  <div className="conv-name">{o?.name || 'Unknown'}</div>
-                  <div className="conv-last">{conv.lastMessage || 'Start chatting…'}</div>
+                <div className="conv-info" style={{ flex: 1, minWidth: 0 }}>
+                  <div className="conv-name" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o?.name || 'Unknown'}</span>
+                    {conv.unreadCount > 0 && (
+                      <span className="badge badge-brand" style={{ fontSize: '10px', padding: '2px 6px', marginLeft: '6px', minWidth: '18px', textAlign: 'center' }}>
+                        {conv.unreadCount}
+                      </span>
+                    )}
+                  </div>
+                  <div className="conv-last" style={{ fontWeight: conv.unreadCount > 0 ? '700' : 'normal', color: conv.unreadCount > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                    {conv.lastMessage || 'Start chatting…'}
+                  </div>
                 </div>
                 <span className="badge badge-neutral" style={{ fontSize: '10px' }}>{o?.role}</span>
               </div>
