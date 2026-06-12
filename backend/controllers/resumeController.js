@@ -1,6 +1,8 @@
 const pdfParse = require('pdf-parse');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const fs = require('fs');
+const mongoose = require('mongoose');
+const stream = require('stream');
+const User = require('../models/User');
 
 // Initialize Gemini API
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'dummy_key');
@@ -14,8 +16,8 @@ exports.analyzeResume = async (req, res) => {
       return res.status(400).json({ message: 'Please upload a PDF resume' });
     }
 
-    // 1. Read the PDF file
-    const dataBuffer = fs.readFileSync(req.file.path);
+    // 1. Read the PDF file from memory buffer
+    const dataBuffer = req.file.buffer;
     
     // 2. Parse text from PDF
     const data = await pdfParse(dataBuffer);
@@ -47,22 +49,72 @@ exports.analyzeResume = async (req, res) => {
       aiFeedback = "Gemini API key is not configured. Please add GEMINI_API_KEY to your .env file to enable AI analysis.";
     }
 
-    // Clean up the uploaded file to save space (since we extracted text)
-    fs.unlinkSync(req.file.path);
+    // 4. Save to GridFS
+    const db = mongoose.connection.db;
+    const bucket = new mongoose.mongo.GridFSBucket(db, {
+      bucketName: 'resumes'
+    });
+    
+    const bufferStream = new stream.PassThrough();
+    bufferStream.end(req.file.buffer);
+    
+    const filename = `${req.user.id}-${Date.now()}.pdf`;
+    const uploadStream = bucket.openUploadStream(filename, {
+      contentType: req.file.mimetype
+    });
+    
+    bufferStream.pipe(uploadStream);
+    
+    await new Promise((resolve, reject) => {
+      uploadStream.on('finish', resolve);
+      uploadStream.on('error', reject);
+    });
+    
+    // 5. Save resumeUrl to User model
+    const fileId = uploadStream.id;
+    await User.findByIdAndUpdate(req.user.id, {
+      resumeUrl: `/api/resume/download/${fileId}`
+    });
 
-    // 4. Return results
+    // 6. Return results
     res.status(200).json({
-      message: 'Resume analyzed successfully',
+      message: 'Resume uploaded and analyzed successfully',
       extractedTextPreview: resumeText.substring(0, 200) + '...',
-      aiFeedback
+      aiFeedback,
+      resumeUrl: `/api/resume/download/${fileId}`
     });
 
   } catch (error) {
     console.error(error);
-    // Cleanup on error too
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
     res.status(500).json({ message: 'Server error during resume analysis' });
+  }
+};
+
+// @desc    Download/View a resume
+// @route   GET /api/resume/download/:fileId
+// @access  Public (or add protect if needed)
+exports.getResume = async (req, res) => {
+  try {
+    const db = mongoose.connection.db;
+    const bucket = new mongoose.mongo.GridFSBucket(db, {
+      bucketName: 'resumes'
+    });
+
+    const fileId = new mongoose.Types.ObjectId(req.params.fileId);
+    
+    // Check if file exists
+    const files = await bucket.find({ _id: fileId }).toArray();
+    if (!files || files.length === 0) {
+      return res.status(404).json({ message: 'Resume not found' });
+    }
+
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `inline; filename="${files[0].filename}"`);
+    
+    const downloadStream = bucket.openDownloadStream(fileId);
+    downloadStream.pipe(res);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error retrieving resume' });
   }
 };
