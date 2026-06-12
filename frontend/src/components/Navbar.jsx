@@ -1,12 +1,15 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useState, useRef, useEffect } from 'react';
-import { Briefcase, LogOut, User, ChevronDown, MessageSquare, LayoutDashboard, Star } from 'lucide-react';
+import api from '../api/axios';
+import { Briefcase, LogOut, User, ChevronDown, MessageSquare, LayoutDashboard, Star, FileText } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
   const ref = useRef(null);
 
   useEffect(() => {
@@ -14,6 +17,15 @@ export default function Navbar() {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // Fetch global unread count
+  useEffect(() => {
+    if (user) {
+      api.get('/chat/conversations')
+        .then(r => setUnread(r.data.reduce((acc, c) => acc + (c.unreadCount || 0), 0)))
+        .catch(console.error);
+    }
+  }, [user, location.pathname]);
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
@@ -37,12 +49,22 @@ export default function Navbar() {
               <LayoutDashboard size={15} /> Dashboard
             </NavLink>
             {user.role === 'student' && (
-              <NavLink to="/recommendations" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
-                <Star size={15} /> Matches
-              </NavLink>
+              <>
+                <NavLink to="/resume" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+                  <FileText size={15} /> Resume
+                </NavLink>
+                <NavLink to="/recommendations" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+                  <Star size={15} /> Matches
+                </NavLink>
+              </>
             )}
-            <NavLink to="/chat" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+            <NavLink to="/chat" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`} style={{ position: 'relative' }}>
               <MessageSquare size={15} /> Chat
+              {unread > 0 && (
+                <span className="badge badge-brand" style={{ position: 'absolute', top: '10px', right: '4px', fontSize: '9px', padding: '1px 4px', minWidth: '14px', height: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {unread}
+                </span>
+              )}
             </NavLink>
           </>
         )}
