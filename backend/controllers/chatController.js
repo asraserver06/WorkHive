@@ -56,7 +56,18 @@ exports.getMyConversations = async (req, res) => {
       .sort('-lastMessageAt')
       .lean();
 
-    res.status(200).json(conversations);
+    // Fetch unread count for each conversation
+    const conversationsWithUnread = await Promise.all(
+      conversations.map(async (conv) => {
+        const unreadCount = await Message.countDocuments({
+          conversation: conv._id,
+          readBy: { $ne: req.user.id },
+        });
+        return { ...conv, unreadCount };
+      })
+    );
+
+    res.status(200).json(conversationsWithUnread);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
