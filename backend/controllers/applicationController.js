@@ -95,14 +95,26 @@ exports.getJobApplications = async (req, res) => {
 
     // Make sure user is the job owner or admin
     if (job.recruiter.toString() !== req.user.id && req.user.role !== 'admin') {
-      return res.status(401).json({ message: 'Not authorized to view these applications' });
+      return res.status(403).json({ message: 'Not authorized to view these applications' });
     }
 
     const applications = await Application.find({ job: req.params.jobId })
       .populate('applicant', 'name email skills resumeUrl')
       .sort('-createdAt');
 
-    res.status(200).json(applications);
+    // BLIND MATCHMAKING: Hide candidate details if not revealed
+    const responseApplications = applications.map((app, index) => {
+      let appObj = app.toObject();
+      if (!appObj.isRevealed && appObj.applicant) {
+        appObj.applicant.name = `Candidate #${index + 1}`;
+        appObj.applicant.email = "Hidden in Blind Mode";
+        appObj.resumeUrl = "Hidden in Blind Mode";
+        if (appObj.applicant.resumeUrl) appObj.applicant.resumeUrl = "Hidden in Blind Mode";
+      }
+      return appObj;
+    });
+
+    res.status(200).json(responseApplications);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -143,6 +155,34 @@ exports.updateApplicationStatus = async (req, res) => {
     }
 
     res.status(200).json(application);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Reveal candidate details (Blind Matchmaking)
+// @route   PUT /api/applications/:id/reveal
+// @access  Private (Recruiter/Admin)
+exports.revealApplication = async (req, res) => {
+  try {
+    let application = await Application.findById(req.params.id).populate('job');
+
+    if (!application) {
+      return res.status(404).json({ message: 'Application not found' });
+    }
+
+    if (application.job.recruiter.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(401).json({ message: 'Not authorized to reveal this application' });
+    }
+
+    application.isRevealed = true;
+    await application.save();
+
+    // Populate the applicant so the frontend can display their real details
+    await application.populate('applicant', 'name email skills resumeUrl');
+
+    res.status(200).json({ message: 'Candidate revealed successfully', application });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
