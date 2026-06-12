@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { MapPin, Briefcase, Clock, ArrowLeft, CheckCircle, Building2, DollarSign, Users } from 'lucide-react';
+import { MapPin, Briefcase, Clock, ArrowLeft, CheckCircle, Building2, DollarSign, Users, Eye } from 'lucide-react';
 
 function timeAgo(date) {
   const d = Math.floor((Date.now() - new Date(date).getTime()) / 86400000);
@@ -21,13 +21,29 @@ export default function JobDetailPage() {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
+  const [applications, setApplications] = useState([]);
 
   useEffect(() => {
     api.get(`/jobs/${id}`)
-      .then(r => setJob(r.data))
+      .then(r => {
+        setJob(r.data);
+        if (user?.role === 'recruiter') {
+          api.get(`/applications/job/${id}`).then(res => setApplications(res.data)).catch(console.error);
+        }
+      })
       .catch(() => toast.error('Job not found'))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, user]);
+
+  const handleReveal = async (appId) => {
+    try {
+      const { data } = await api.put(`/applications/${appId}/reveal`);
+      setApplications(prev => prev.map(a => a._id === appId ? data.application : a));
+      toast.success('Candidate revealed!');
+    } catch (err) {
+      toast.error('Failed to reveal candidate');
+    }
+  };
 
   const handleApply = async () => {
     if (!user) { navigate('/login'); return; }
@@ -122,25 +138,88 @@ export default function JobDetailPage() {
             </div>
           )}
 
-          {/* Recruiter info */}
-          <div className="card animate-fade-in-up" style={{ animationDelay: '0.08s' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px' }}>Posted by</h3>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div className="user-avatar" style={{ width: '40px', height: '40px', fontSize: '16px' }}>
-                {job.recruiter?.name?.[0] || 'R'}
+          {/* Recruiter info (For students) */}
+          {user?.role === 'student' && (
+            <div className="card animate-fade-in-up" style={{ animationDelay: '0.08s' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px' }}>Posted by</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div className="user-avatar" style={{ width: '40px', height: '40px', fontSize: '16px' }}>
+                  {job.recruiter?.name?.[0] || 'R'}
+                </div>
+                <div>
+                  <div style={{ fontWeight: '600', fontSize: '14px' }}>{job.recruiter?.name}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{job.recruiter?.email}</div>
+                </div>
               </div>
-              <div>
-                <div style={{ fontWeight: '600', fontSize: '14px' }}>{job.recruiter?.name}</div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{job.recruiter?.email}</div>
-              </div>
-            </div>
-            {user && user.role === 'student' && (
               <button className="btn btn-secondary btn-full btn-sm" style={{ marginTop: '12px' }}
-                onClick={() => navigate('/chat')}>
+                onClick={async () => {
+                  try {
+                    await api.post('/chat/conversations', { recipientId: job.recruiter._id });
+                    navigate('/chat');
+                  } catch (err) {
+                    toast.error('Failed to start conversation');
+                  }
+                }}>
                 <Users size={14} /> Message Recruiter
               </button>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Recruiter Actions & Applicants (For Recruiters) */}
+          {user?.role === 'recruiter' && (
+            <div className="card animate-fade-in-up" style={{ animationDelay: '0.08s' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px' }}>Applicants ({applications.length})</h3>
+              {applications.length === 0 ? (
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>No applications yet.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {applications.map(app => (
+                    <div key={app._id} style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
+                        {app.applicant?.name || 'Anonymous Candidate'}
+                      </div>
+                      
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                        {app.applicant?.email}
+                      </div>
+
+                      <div style={{ marginBottom: '8px' }}>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Skills:</div>
+                        <div className="job-skills" style={{ gap: '4px' }}>
+                          {app.applicant?.skills?.slice(0,3).map(s => <span key={s} style={{ fontSize: '10px', padding: '2px 6px', background: 'var(--bg-card)', borderRadius: '4px', border: '1px solid var(--border-color)' }}>{s}</span>)}
+                          {app.applicant?.skills?.length > 3 && <span style={{ fontSize: '10px' }}>+{app.applicant.skills.length - 3}</span>}
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                        <span className={`badge ${app.status === 'Applied' ? 'badge-neutral' : 'badge-brand'}`}>{app.status}</span>
+                        
+                        {!app.isRevealed ? (
+                          <button 
+                            className="btn btn-secondary btn-sm" 
+                            style={{ padding: '4px 8px', fontSize: '11px' }}
+                            onClick={() => handleReveal(app._id)}
+                          >
+                            <Eye size={12} style={{ marginRight: '4px' }} /> Reveal Match
+                          </button>
+                        ) : (
+                          <a 
+                            href={(app.resumeUrl || app.applicant?.resumeUrl)?.startsWith('/') ? `http://localhost:5000${app.resumeUrl || app.applicant?.resumeUrl}` : (app.resumeUrl || app.applicant?.resumeUrl)} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            className="btn btn-ghost btn-sm" 
+                            style={{ padding: '4px 8px', fontSize: '11px', color: 'var(--brand)' }}
+                          >
+                            View Resume
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
