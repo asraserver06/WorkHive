@@ -18,9 +18,10 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      // localStorage.removeItem('token');
+      // localStorage.removeItem('user');
+      // window.location.href = '/login';
+      alert('401 Error Detected: ' + (err.response?.data?.message || 'Unknown'));
     }
     return Promise.reject(err);
   }
