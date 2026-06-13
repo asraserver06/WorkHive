@@ -22,6 +22,8 @@ export default function JobDetailPage() {
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
   const [applications, setApplications] = useState([]);
+  const [schedulingAppId, setSchedulingAppId] = useState(null);
+  const [interviewDate, setInterviewDate] = useState('');
 
   useEffect(() => {
     api.get(`/jobs/${id}`)
@@ -56,6 +58,29 @@ export default function JobDetailPage() {
       toast.error(err.response?.data?.message || 'Failed to apply');
     } finally {
       setApplying(false);
+    }
+  };
+
+  const handleStatusUpdate = async (appId, status) => {
+    try {
+      const { data } = await api.put(`/applications/${appId}/status`, { status });
+      setApplications(prev => prev.map(a => a._id === appId ? { ...data, applicant: a.applicant } : a));
+      toast.success(`Application marked as ${status}`);
+    } catch (err) {
+      toast.error('Failed to update status');
+    }
+  };
+
+  const handleSchedule = async (appId) => {
+    if (!interviewDate) return toast.error('Please select a date and time');
+    try {
+      const { data } = await api.put(`/applications/${appId}/schedule`, { interviewDate });
+      setApplications(prev => prev.map(a => a._id === appId ? { ...data.application, applicant: a.applicant } : a));
+      setSchedulingAppId(null);
+      setInterviewDate('');
+      toast.success('Interview scheduled and email sent! 📅');
+    } catch (err) {
+      toast.error('Failed to schedule interview');
     }
   };
 
@@ -203,17 +228,64 @@ export default function JobDetailPage() {
                             <Eye size={12} style={{ marginRight: '4px' }} /> Reveal Match
                           </button>
                         ) : (
-                          <a 
-                            href={(app.resumeUrl || app.applicant?.resumeUrl)?.startsWith('/') ? `http://localhost:5000${app.resumeUrl || app.applicant?.resumeUrl}` : (app.resumeUrl || app.applicant?.resumeUrl)} 
-                            target="_blank" 
-                            rel="noreferrer" 
-                            className="btn btn-ghost btn-sm" 
-                            style={{ padding: '4px 8px', fontSize: '11px', color: 'var(--brand)' }}
-                          >
-                            View Resume
-                          </a>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                            <a 
+                              href={(app.resumeUrl || app.applicant?.resumeUrl)?.startsWith('/') ? `http://localhost:5000${app.resumeUrl || app.applicant?.resumeUrl}` : (app.resumeUrl || app.applicant?.resumeUrl)} 
+                              target="_blank" 
+                              rel="noreferrer" 
+                              className="btn btn-ghost btn-sm" 
+                              style={{ padding: '4px 8px', fontSize: '11px', color: 'var(--brand)' }}
+                            >
+                              View Resume
+                            </a>
+                            {app.status !== 'Interview' && app.status !== 'Rejected' && app.status !== 'Offered' && (
+                              <button
+                                className="btn btn-primary btn-sm"
+                                style={{ padding: '4px 8px', fontSize: '11px' }}
+                                onClick={() => setSchedulingAppId(app._id)}
+                              >
+                                Schedule
+                              </button>
+                            )}
+                            {app.status !== 'Rejected' && app.status !== 'Offered' && (
+                              <button
+                                className="btn btn-ghost btn-sm"
+                                style={{ padding: '4px 8px', fontSize: '11px', color: 'var(--error)' }}
+                                onClick={() => handleStatusUpdate(app._id, 'Rejected')}
+                              >
+                                Reject
+                              </button>
+                            )}
+                            {app.status === 'Interview' && (
+                              <button
+                                className="btn btn-success btn-sm"
+                                style={{ padding: '4px 8px', fontSize: '11px', background: 'rgba(16,185,129,0.15)', color: 'var(--success)', border: '1px solid rgba(16,185,129,0.3)' }}
+                                onClick={() => handleStatusUpdate(app._id, 'Offered')}
+                              >
+                                Offer
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
+                      
+                      {/* Scheduler UI */}
+                      {schedulingAppId === app._id && (
+                        <div style={{ marginTop: '12px', padding: '12px', background: 'var(--bg-card)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                          <div style={{ fontSize: '12px', fontWeight: '600', marginBottom: '8px' }}>Schedule Interview</div>
+                          <input 
+                            type="datetime-local" 
+                            className="form-input" 
+                            style={{ fontSize: '13px', padding: '6px', marginBottom: '8px' }}
+                            value={interviewDate}
+                            onChange={(e) => setInterviewDate(e.target.value)}
+                          />
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <button className="btn btn-ghost btn-sm" onClick={() => setSchedulingAppId(null)}>Cancel</button>
+                            <button className="btn btn-primary btn-sm" onClick={() => handleSchedule(app._id)}>Confirm</button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
