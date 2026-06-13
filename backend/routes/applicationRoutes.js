@@ -5,7 +5,8 @@ const {
   getMyApplications,
   getJobApplications,
   updateApplicationStatus,
-  revealApplication
+  revealApplication,
+  scheduleInterview
 } = require('../controllers/applicationController');
 
 const { protect, authorize } = require('../middleware/authMiddleware');
@@ -15,5 +16,6 @@ router.get('/my-applications', protect, authorize('student'), getMyApplications)
 router.get('/job/:jobId', protect, authorize('recruiter', 'admin'), getJobApplications);
 router.put('/:id/status', protect, authorize('recruiter', 'admin'), updateApplicationStatus);
 router.put('/:id/reveal', protect, authorize('recruiter', 'admin'), revealApplication);
+router.put('/:id/schedule', protect, authorize('recruiter', 'admin'), scheduleInterview);
 
 module.exports = router;
