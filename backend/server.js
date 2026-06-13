@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
+const path = require('path');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -97,6 +98,16 @@ app.get('/', (_req, res) => {
     ],
   });
 });
+
+// ── Serve Frontend in Production ──────────────────────────────
+if (process.env.NODE_ENV === 'production') {
+  const frontendPath = path.join(__dirname, '../frontend/dist');
+  app.use(express.static(frontendPath));
+
+  app.get('*', (req, res) => {
+    res.sendFile(path.resolve(frontendPath, 'index.html'));
+  });
+}
 
 // ── Socket.io – Real-time Chat ────────────────────────────────
 //
