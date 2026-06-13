@@ -1,8 +1,6 @@
 require('dotenv').config();
 const express = require('express');
-const http = require('http');
-const path = require('path');
-const { Server } = require('socket.io');
+const serverless = require('serverless-http');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
@@ -25,15 +23,6 @@ const User = require('./models/User');
 
 // ── Express app ──────────────────────────────────────────────
 const app = express();
-const httpServer = http.createServer(app);
-
-// ── Socket.io server ─────────────────────────────────────────
-const io = new Server(httpServer, {
-  cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    methods: ['GET', 'POST'],
-  },
-});
 
 // ── Middleware ────────────────────────────────────────────────
 app.use(helmet());
@@ -50,12 +39,6 @@ app.use('/api/', apiLimiter);
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
 }));
-
-// Attach io to every request so controllers can emit events if needed
-app.use((req, _res, next) => {
-  req.io = io;
-  next();
-});
 
 // ── Database Connection ───────────────────────────────────────
 mongoose
@@ -99,159 +82,5 @@ app.get('/', (_req, res) => {
   });
 });
 
-// ── Serve Frontend in Production ──────────────────────────────
-if (process.env.NODE_ENV === 'production') {
-  const frontendPath = path.join(__dirname, '../frontend/dist');
-  app.use(express.static(frontendPath));
-
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(frontendPath, 'index.html'));
-  });
-}
-
-// ── Socket.io – Real-time Chat ────────────────────────────────
-//
-// Authentication middleware: validate JWT on every socket connection
-io.use(async (socket, next) => {
-  try {
-    const token = socket.handshake.auth?.token;
-    if (!token) return next(new Error('Authentication error: no token'));
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select('-password');
-    if (!user) return next(new Error('Authentication error: user not found'));
-
-    socket.user = user; // Attach user to socket
-    next();
-  } catch (err) {
-    next(new Error('Authentication error: invalid token'));
-  }
-});
-
-// Track online users: userId → socketId
-const onlineUsers = new Map();
-
-io.on('connection', (socket) => {
-  const userId = socket.user._id.toString();
-  onlineUsers.set(userId, socket.id);
-
-  console.log(`🟢 User connected: ${socket.user.name} (${userId})`);
-
-  // Broadcast updated online users list
-  io.emit('onlineUsers', Array.from(onlineUsers.keys()));
-
-  // ── Join a conversation room ──────────────────────────────
-  socket.on('joinConversation', async (conversationId) => {
-    try {
-      // Verify the user is actually a participant
-      const convo = await Conversation.findOne({
-        _id: conversationId,
-        participants: userId,
-      });
-      if (!convo) {
-        socket.emit('error', { message: 'Not authorized for this conversation' });
-        return;
-      }
-      socket.join(conversationId);
-      socket.emit('joinedConversation', { conversationId });
-    } catch (err) {
-      socket.emit('error', { message: 'Could not join conversation' });
-    }
-  });
-
-  // ── Send a message ────────────────────────────────────────
-  socket.on('sendMessage', async ({ conversationId, text }) => {
-    try {
-      if (!text || !text.trim()) return;
-
-      // Verify participant
-      const convo = await Conversation.findOne({
-        _id: conversationId,
-        participants: userId,
-      });
-      if (!convo) {
-        socket.emit('error', { message: 'Not authorized for this conversation' });
-        return;
-      }
-
-      // Persist to DB
-      const message = await Message.create({
-        conversation: conversationId,
-        sender: userId,
-        text: text.trim(),
-        readBy: [userId],
-      });
-
-      // Update conversation snapshot
-      await Conversation.findByIdAndUpdate(conversationId, {
-        lastMessage: text.trim(),
-        lastMessageAt: new Date(),
-      });
-
-      const populated = await message.populate('sender', 'name role');
-
-      // Broadcast to everyone in the room (including sender)
-      io.to(conversationId).emit('newMessage', populated);
-
-      // Notify the other participant even if not in the room
-      convo.participants.forEach((participantId) => {
-        const pid = participantId.toString();
-        if (pid !== userId && onlineUsers.has(pid)) {
-          io.to(onlineUsers.get(pid)).emit('conversationUpdated', {
-            conversationId,
-            lastMessage: text.trim(),
-            lastMessageAt: new Date(),
-          });
-        }
-      });
-    } catch (err) {
-      console.error('sendMessage error:', err);
-      socket.emit('error', { message: 'Failed to send message' });
-    }
-  });
-
-  // ── Delete a message ──────────────────────────────────────
-  socket.on('deleteMessage', async ({ conversationId, messageId }) => {
-    try {
-      const msg = await Message.findById(messageId);
-      if (!msg) return;
-
-      // Only the sender can delete the message
-      if (msg.sender.toString() !== userId) {
-        return socket.emit('error', { message: 'Not authorized to delete this message' });
-      }
-
-      await Message.findByIdAndDelete(messageId);
-      io.to(conversationId).emit('messageDeleted', messageId);
-    } catch (err) {
-      console.error('deleteMessage error:', err);
-      socket.emit('error', { message: 'Failed to delete message' });
-    }
-  });
-
-  // ── Typing indicators ─────────────────────────────────────
-  socket.on('typing', ({ conversationId }) => {
-    socket.to(conversationId).emit('userTyping', {
-      userId,
-      name: socket.user.name,
-    });
-  });
-
-  socket.on('stopTyping', ({ conversationId }) => {
-    socket.to(conversationId).emit('userStoppedTyping', { userId });
-  });
-
-  // ── Disconnect ────────────────────────────────────────────
-  socket.on('disconnect', () => {
-    onlineUsers.delete(userId);
-    io.emit('onlineUsers', Array.from(onlineUsers.keys()));
-    console.log(`🔴 User disconnected: ${socket.user.name} (${userId})`);
-  });
-});
-
-// ── Start Server ──────────────────────────────────────────────
-const PORT = process.env.PORT || 5000;
-httpServer.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📡 Socket.io ready`);
-});
+// ── Serverless Export ─────────────────────────────────────────
+module.exports.handler = serverless(app);
