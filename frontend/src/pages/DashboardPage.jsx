@@ -27,10 +27,13 @@ function timeAgo(date) {
 function StudentDashboard() {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [recommendations, setRecommendations] = useState([]);
+  const [recLoading, setRecLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     api.get('/applications/my-applications').then(r => setApplications(r.data)).finally(() => setLoading(false));
+    api.get('/recommendations').then(r => setRecommendations(r.data.recommendations || [])).catch(err => console.error(err)).finally(() => setRecLoading(false));
   }, []);
 
   const byStatus = (s) => applications.filter(a => a.status === s);
@@ -94,6 +97,53 @@ function StudentDashboard() {
                 </div>
               );
             })}
+          </div>
+        )}
+      </div>
+
+      {/* Recommended for You */}
+      <div style={{ marginTop: '16px' }}>
+        <div className="section-title"><Star size={18} /> Recommended for You</div>
+        {recLoading ? (
+          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading recommendations...</div>
+        ) : recommendations.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">💡</div>
+            <h3>No specific recommendations yet</h3>
+            <p>Update your profile with more skills or resume to get better matches.</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {recommendations.slice(0, 3).map(job => (
+              <div className="card" key={job._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontWeight: '700', marginBottom: '4px' }}>{job.title}</div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <span>🏢 {job.company}</span>
+                    <span>📍 {job.location}</span>
+                    {job.matchScore > 0 && (
+                      <span className="badge badge-success" style={{ padding: '2px 6px', fontSize: '11px' }}>
+                        {job.matchScore} Skill Match{job.matchScore > 1 ? 'es' : ''}
+                      </span>
+                    )}
+                  </div>
+                  {job.matchedSkills?.length > 0 && (
+                    <div style={{ marginTop: '8px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {job.matchedSkills.map(skill => (
+                        <span key={skill} style={{ fontSize: '11px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '2px 6px', color: 'var(--text-muted)' }}>
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <button className="btn btn-secondary btn-sm" onClick={() => navigate(`/jobs/${job._id}`)}>
+                    View Job
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
