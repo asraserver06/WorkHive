@@ -1,6 +1,5 @@
 require('dotenv').config();
 const express = require('express');
-const serverless = require('serverless-http');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -55,11 +54,6 @@ app.get('/api', (_req, res) => {
   res.json({ message: 'WorkHive API 🚀', version: '1.0.0' });
 });
 
-// ── Serverless Export ─────────────────────────────────────────
-const serverlessHandler = serverless(app);
-
-module.exports.handler = async (event, context) => {
-  context.callbackWaitsForEmptyEventLoop = false;
-  await connectDB();
-  return serverlessHandler(event, context);
-};
+// ── Exports ──────────────────────────────────────────────────
+module.exports = app;
+module.exports.connectDB = connectDB;
