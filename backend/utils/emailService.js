@@ -173,9 +173,35 @@ const sendNewApplicantAlert = async ({ recruiterEmail, recruiterName, studentNam
   });
 };
 
+// ── 5. Interview Scheduled Email (notify student) ──────────────
+const sendInterviewScheduledEmail = async ({ studentName, studentEmail, jobTitle, company, interviewDate }) => {
+  const html = htmlWrapper(`
+    <h2>📅 Interview Scheduled</h2>
+    <p>Hi <strong>${studentName}</strong>,</p>
+    <p>Good news! Your interview for the following position has been scheduled:</p>
+    <div class="job-card">
+      <h3>${jobTitle}</h3>
+      <p>${company}</p>
+      <hr style="border: none; border-top: 1px solid #334155; margin: 12px 0;" />
+      <p style="color: #f1f5f9;"><strong>Date & Time:</strong> ${new Date(interviewDate).toLocaleString()}</p>
+    </div>
+    <span class="badge badge-interview">● Interview Scheduled</span>
+    <p>Please check your dashboard or reach out to the recruiter for meeting links or location details.</p>
+    <a href="${process.env.CLIENT_URL}/dashboard" class="btn">View Dashboard →</a>
+  `);
+
+  await transporter.sendMail({
+    from: `"Smart Career Portal" <${process.env.MAIL_FROM || process.env.MAIL_USER}>`,
+    to: studentEmail,
+    subject: `Interview Scheduled — ${jobTitle} at ${company}`,
+    html,
+  });
+};
+
 module.exports = {
   sendWelcomeEmail,
   sendApplicationConfirmation,
   sendStatusUpdateEmail,
   sendNewApplicantAlert,
+  sendInterviewScheduledEmail,
 };
