@@ -149,7 +149,7 @@ career-portal/
 | **Notifications** | React Hot Toast | Non-intrusive toast alerts |
 | **Backend** | Node.js + Express 5 | REST API server |
 | **Database** | MongoDB + Mongoose 9 | Document-based data storage |
-| **Auth** | JWT + bcryptjs | Stateless auth with hashed passwords |
+| **Auth & Security** | JWT, bcrypt, Helmet, Rate-Limit | Stateless auth, headers, injection & brute-force protection |
 | **Real-Time** | Socket.io 4 | WebSocket-powered live chat |
 | **AI Engine** | Google Gemini AI | Resume analysis & smart suggestions |
 | **File Upload** | Multer | PDF resume handling |
@@ -282,13 +282,15 @@ npm run dev
 
 ## 🔒 Security Architecture
 
-- 🛡️ **Password Hashing** — bcryptjs with salt rounds (no plain-text passwords ever stored)
-- 🎫 **JWT Tokens** — Stateless authentication with expiry enforcement
-- 🚧 **Route Guards** — Middleware protects every private endpoint
-- 👥 **Role Enforcement** — Recruiter-only and Candidate-only routes are strictly separated
-- 📁 **File Validation** — Only PDF uploads accepted for resume analysis
-- 🌐 **CORS Policy** — Configured to allow only trusted origins
-- 🔑 **Environment Secrets** — All sensitive keys loaded from `.env` (never committed)
+- 🛡️ **Password Hashing** — bcryptjs with salt rounds (no plain-text passwords ever stored).
+- 🎫 **JWT Tokens** — Stateless authentication with expiry enforcement.
+- 🚧 **Route Guards** — Middleware protects every private endpoint.
+- 👥 **Role Enforcement** — Recruiter-only and Candidate-only routes are strictly separated.
+- 📁 **File Validation & Limits** — Only PDF uploads accepted (max 5MB) preventing memory-exhaustion.
+- 🌐 **CORS & HTTP Headers** — Restricted origins and `helmet` package for robust header security (XSS, Clickjacking prevention).
+- 🛑 **Rate Limiting** — `express-rate-limit` protects API endpoints from brute-force and DDoS attacks.
+- 💉 **NoSQL Injection Protection** — `express-mongo-sanitize` strips out prohibited payload characters (`$`, `.`).
+- 🔑 **Environment Secrets** — All sensitive keys loaded from `.env` and safely ignored via `.gitignore`.
 
 ---
 

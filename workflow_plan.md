@@ -2,7 +2,7 @@
 
 This document outlines a detailed step-by-step workflow for building the Smart Career & Internship Portal. We will use the MERN stack (MongoDB, Express.js, React, Node.js) and integrate AI functionalities and real-time features.
 
-## Phase 1: Setup & Architecture (Current Phase)
+## Phase 1: Setup & Architecture (Completed)
 1. **Initialize Repositories**: 
    - `backend` folder initialized with Node.js/Express.
    - `frontend` folder initialized with React (Vite).
@@ -14,7 +14,7 @@ This document outlines a detailed step-by-step workflow for building the Smart C
 3. **Environment Setup**:
    - Configure `.env` for MongoDB URI, JWT Secret, API Keys (OpenAI/Gemini for AI features).
 
-## Phase 2: Backend Development (API Foundation)
+## Phase 2: Backend Development (API Foundation) (Completed)
 1. **Authentication & Authorization (`/api/auth`)**:
    - Sign up / Login endpoints with JWT.
    - Middleware for Role-based access control (RBAC).
@@ -32,7 +32,7 @@ This document outlines a detailed step-by-step workflow for building the Smart C
    - Setup Socket.io server.
    - Create endpoints to fetch chat history.
 
-## Phase 3: Frontend Development (UI & Integration)
+## Phase 3: Frontend Development (UI & Integration) (Completed)
 1. **Routing & Core Layout**:
    - Setup React Router (`/`, `/login`, `/dashboard`, `/jobs`, `/jobs/:id`, `/messages`).
    - Create a Navigation bar and responsive layout.
@@ -51,7 +51,7 @@ This document outlines a detailed step-by-step workflow for building the Smart C
 6. **Chat Interface**:
    - Real-time messaging UI using Socket.io client.
 
-## Phase 4: Advanced Features
+## Phase 4: Advanced Features (Completed)
 1. **Smart Recommendation System**:
    - Simple recommendation logic on the backend: match user skills and past applications with job required skills.
    - Display a "Recommended for You" section on the student dashboard.
@@ -59,8 +59,13 @@ This document outlines a detailed step-by-step workflow for building the Smart C
    - Integration with a calendar or simple date picker.
    - Send email notifications (using Nodemailer).
 
-## Phase 5: Polish, Testing & Deployment
-1. **Styling**:
+## Phase 5: Polish, Testing & Deployment (Current Phase)
+1. **Security Hardening (Completed)**:
+   - Implemented `helmet` for HTTP headers.
+   - Set up `express-rate-limit` for DDoS/brute-force protection.
+   - Enforced `express-mongo-sanitize` to prevent NoSQL injection.
+   - Restricted file upload sizes (5MB PDF limits).
+2. **Styling (Completed)**:
    - Ensure modern, vibrant, dynamic design (Vanilla CSS or customized frameworks).
 2. **Testing**:
    - Backend unit tests (Jest/Supertest).
@@ -72,5 +77,5 @@ This document outlines a detailed step-by-step workflow for building the Smart C
 
 ---
 ### Next Immediate Steps:
-1. Set up the MongoDB connection in the backend (`backend/server.js`).
-2. Create the fundamental User model and Authentication endpoints.
+1. Finalize and execute deployment of the backend to Render/Railway.
+2. Finalize and execute deployment of the frontend to Vercel/Netlify.
