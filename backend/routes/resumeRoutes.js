@@ -1,15 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const fs = require('fs');
 const { analyzeResume, getResume } = require('../controllers/resumeController');
 const { protect, authorize } = require('../middleware/authMiddleware');
-
-// Ensure uploads directory exists
-const uploadDir = 'uploads';
-if (!fs.existsSync(uploadDir)){
-    fs.mkdirSync(uploadDir);
-}
 
 // Configure Multer for PDF uploads using memory storage
 const storage = multer.memoryStorage();
