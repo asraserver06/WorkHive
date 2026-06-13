@@ -73,7 +73,7 @@ app.use('/api/recommendations', recommendationRoutes);
 
 app.get('/', (_req, res) => {
   res.json({
-    message: 'Smart Career Portal API 🚀',
+    message: 'WorkHive API 🚀',
     version: '1.0.0',
     endpoints: [
       'POST   /api/auth/register',

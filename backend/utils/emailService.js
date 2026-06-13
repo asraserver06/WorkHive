@@ -42,11 +42,11 @@ const htmlWrapper = (content) => `
 <body>
   <div class="container">
     <div class="header">
-      <h1>🚀 Smart Career Portal</h1>
+      <h1>🚀 WorkHive</h1>
       <p>Your gateway to the perfect opportunity</p>
     </div>
     <div class="body">${content}</div>
-    <div class="footer">© ${new Date().getFullYear()} Smart Career Portal · All rights reserved</div>
+    <div class="footer">© ${new Date().getFullYear()} WorkHive · All rights reserved</div>
   </div>
 </body>
 </html>
@@ -73,9 +73,9 @@ const sendWelcomeEmail = async ({ name, email, role }) => {
   `);
 
   await transporter.sendMail({
-    from: `"Smart Career Portal" <${process.env.MAIL_FROM || process.env.MAIL_USER}>`,
+    from: `"WorkHive" <${process.env.MAIL_FROM || process.env.MAIL_USER}>`,
     to: email,
-    subject: `Welcome to Smart Career Portal, ${name}! 🎉`,
+    subject: `Welcome to WorkHive, ${name}! 🎉`,
     html,
   });
 };
@@ -95,7 +95,7 @@ const sendApplicationConfirmation = async ({ studentName, studentEmail, jobTitle
   `);
 
   await transporter.sendMail({
-    from: `"Smart Career Portal" <${process.env.MAIL_FROM || process.env.MAIL_USER}>`,
+    from: `"WorkHive" <${process.env.MAIL_FROM || process.env.MAIL_USER}>`,
     to: studentEmail,
     subject: `Application Submitted — ${jobTitle} at ${company}`,
     html,
@@ -145,7 +145,7 @@ const sendStatusUpdateEmail = async ({ studentName, studentEmail, jobTitle, comp
   `);
 
   await transporter.sendMail({
-    from: `"Smart Career Portal" <${process.env.MAIL_FROM || process.env.MAIL_USER}>`,
+    from: `"WorkHive" <${process.env.MAIL_FROM || process.env.MAIL_USER}>`,
     to: studentEmail,
     subject: `Application Update: ${status} — ${jobTitle} at ${company}`,
     html,
@@ -166,7 +166,7 @@ const sendNewApplicantAlert = async ({ recruiterEmail, recruiterName, studentNam
   `);
 
   await transporter.sendMail({
-    from: `"Smart Career Portal" <${process.env.MAIL_FROM || process.env.MAIL_USER}>`,
+    from: `"WorkHive" <${process.env.MAIL_FROM || process.env.MAIL_USER}>`,
     to: recruiterEmail,
     subject: `New Applicant for "${jobTitle}" — ${studentName}`,
     html,
@@ -191,7 +191,7 @@ const sendInterviewScheduledEmail = async ({ studentName, studentEmail, jobTitle
   `);
 
   await transporter.sendMail({
-    from: `"Smart Career Portal" <${process.env.MAIL_FROM || process.env.MAIL_USER}>`,
+    from: `"WorkHive" <${process.env.MAIL_FROM || process.env.MAIL_USER}>`,
     to: studentEmail,
     subject: `Interview Scheduled — ${jobTitle} at ${company}`,
     html,

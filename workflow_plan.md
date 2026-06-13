@@ -1,6 +1,6 @@
-# Smart Career & Internship Portal Workflow
+# WorkHive Workflow
 
-This document outlines a detailed step-by-step workflow for building the Smart Career & Internship Portal. We will use the MERN stack (MongoDB, Express.js, React, Node.js) and integrate AI functionalities and real-time features.
+This document outlines a detailed step-by-step workflow for building the WorkHive. We will use the MERN stack (MongoDB, Express.js, React, Node.js) and integrate AI functionalities and real-time features.
 
 ## Phase 1: Setup & Architecture (Completed)
 1. **Initialize Repositories**: 

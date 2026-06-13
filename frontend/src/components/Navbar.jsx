@@ -35,7 +35,7 @@ export default function Navbar() {
     <nav className="navbar">
       <NavLink to="/" className="navbar-brand">
         <Briefcase size={20} />
-        CareerPortal
+        WorkHive
         <span className="logo-dot" />
       </NavLink>
 

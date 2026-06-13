@@ -34,11 +34,11 @@
 
 ---
 
-## 🌟 What is Career Portal?
+## 🌟 What is WorkHive?
 
-**Career Portal** is a full-stack, AI-enhanced Smart Career & Internship Platform built on the **MERN stack**. It bridges the gap between ambitious job seekers and forward-thinking recruiters — all under one intelligent roof.
+**WorkHive** is a full-stack, AI-enhanced Smart Career & Internship Platform built on the **MERN stack**. It bridges the gap between ambitious job seekers and forward-thinking recruiters — all under one intelligent roof.
 
-Whether you're a **fresh graduate** hunting your first internship or an **experienced recruiter** looking for the perfect fit, Career Portal puts the power of **Google Gemini AI**, **real-time messaging**, and **intelligent resume analysis** right at your fingertips.
+Whether you're a **fresh graduate** hunting your first internship or an **experienced recruiter** looking for the perfect fit, WorkHive puts the power of **Google Gemini AI**, **real-time messaging**, and **intelligent resume analysis** right at your fingertips.
 
 ---
 
@@ -335,7 +335,7 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 
 **Developed by [asraserver06](https://github.com/asraserver06)**
 
-*Smart Career & Internship Portal — Empowering careers through AI*
+*WorkHive — Empowering careers through AI*
 
 <br/>
 

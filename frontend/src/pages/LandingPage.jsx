@@ -80,9 +80,9 @@ export default function LandingPage() {
       <footer style={{ padding: '40px 24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '15px', position: 'relative', zIndex: 10, background: 'var(--bg-base)', fontWeight: '500' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '12px' }}>
           <Briefcase size={20} style={{ color: 'var(--brand-400)' }} />
-          <span style={{ fontWeight: '800', color: 'var(--text-primary)', fontSize: '18px' }}>CareerPortal</span>
+          <span style={{ fontWeight: '800', color: 'var(--text-primary)', fontSize: '18px' }}>WorkHive</span>
         </div>
-        © {new Date().getFullYear()} CareerPortal. All rights reserved.
+        © {new Date().getFullYear()} WorkHive. All rights reserved.
       </footer>
     </div>
   );

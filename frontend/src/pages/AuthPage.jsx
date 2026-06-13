@@ -36,7 +36,7 @@ export default function AuthPage() {
         <div className="auth-logo">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '8px' }}>
             <Briefcase size={24} style={{ color: 'var(--brand-400)' }} />
-            <span style={{ fontFamily: 'var(--font-display)', fontWeight: '800', fontSize: '22px' }}>CareerPortal</span>
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: '800', fontSize: '22px' }}>WorkHive</span>
           </div>
           <p>{tab === 'login' ? 'Welcome back! Sign in to continue.' : 'Create your account to get started.'}</p>
         </div>
