@@ -3,11 +3,13 @@
   publish = "frontend/dist"
 
 [functions]
-  directory = "backend"
+  directory = "netlify/functions"
+  node_bundler = "nft"
+  included_files = ["backend/**"]
 
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/server/:splat"
+  to = "/.netlify/functions/server/api/:splat"
   status = 200
 
 [[redirects]]
