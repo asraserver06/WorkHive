@@ -333,12 +333,10 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 
 <div align="center">
 
-**Developed with 💙 by [asraserver06](https://github.com/asraserver06)**
+**Developed by [asraserver06](https://github.com/asraserver06)**
 
 *Smart Career & Internship Portal — Empowering careers through AI*
 
 <br/>
-
-⭐ **If this project helped you, consider giving it a star!** ⭐
 
 </div>
