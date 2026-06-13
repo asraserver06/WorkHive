@@ -5,6 +5,7 @@ const {
   sendApplicationConfirmation,
   sendNewApplicantAlert,
   sendStatusUpdateEmail,
+  sendInterviewScheduledEmail,
 } = require('../utils/emailService');
 
 // @desc    Apply for a job
@@ -183,6 +184,51 @@ exports.revealApplication = async (req, res) => {
     await application.populate('applicant', 'name email skills resumeUrl');
 
     res.status(200).json({ message: 'Candidate revealed successfully', application });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Schedule an interview
+// @route   PUT /api/applications/:id/schedule
+// @access  Private (Recruiter/Admin)
+exports.scheduleInterview = async (req, res) => {
+  try {
+    const { interviewDate } = req.body;
+    
+    if (!interviewDate) {
+      return res.status(400).json({ message: 'Interview date is required' });
+    }
+
+    let application = await Application.findById(req.params.id).populate('job');
+
+    if (!application) {
+      return res.status(404).json({ message: 'Application not found' });
+    }
+
+    if (application.job.recruiter.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(401).json({ message: 'Not authorized to schedule interview' });
+    }
+
+    // Update status to Interview and save
+    application.status = 'Interview';
+    // Optionally you could add an interviewDate field to Application schema.
+    // For now, we just send the email and update status.
+    await application.save();
+
+    const student = await User.findById(application.applicant).select('name email');
+    if (student) {
+      sendInterviewScheduledEmail({
+        studentName:  student.name,
+        studentEmail: student.email,
+        jobTitle:     application.job.title,
+        company:      application.job.company,
+        interviewDate
+      }).catch((err) => console.error('Interview schedule email failed:', err.message));
+    }
+
+    res.status(200).json({ message: 'Interview scheduled successfully', application });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
