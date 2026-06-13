@@ -5,6 +5,9 @@ const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
 
 // Route imports
 const authRoutes = require('./routes/authRoutes');
@@ -32,7 +35,17 @@ const io = new Server(httpServer, {
 });
 
 // ── Middleware ────────────────────────────────────────────────
+app.use(helmet());
+app.use(mongoSanitize());
 app.use(express.json());
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again after 15 minutes'
+});
+app.use('/api/', apiLimiter);
+
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
 }));
