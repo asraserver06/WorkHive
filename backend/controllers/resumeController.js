@@ -7,6 +7,33 @@ const User = require('../models/User');
 // Initialize Gemini API
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'dummy_key');
 
+async function generateWithRetry(prompt) {
+  const MODELS = ['gemini-3.5-flash', 'gemini-3.1-flash-lite'];
+  let lastError;
+
+  for (const modelName of MODELS) {
+    const model = genAI.getGenerativeModel({ model: modelName });
+
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const result = await model.generateContent(prompt);
+        return result.response.text();
+      } catch (err) {
+        lastError = err;
+        console.error(`Gemini model ${modelName}, attempt ${attempt}:`, err.message);
+
+        if (!/503|429|overloaded|high demand/i.test(err.message) || attempt === 2) {
+          break;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+      }
+    }
+  }
+
+  throw lastError;
+}
+
 // @desc    Upload resume and analyze with AI
 // @route   POST /api/resume/analyze
 // @access  Private (Student)
@@ -31,16 +58,13 @@ exports.analyzeResume = async (req, res) => {
     
     if (process.env.GEMINI_API_KEY) {
       try {
-        const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
-        
         let prompt = `Analyze the following resume text. Extract the key skills, experience level, and provide 3 brief bullet points of constructive feedback to improve it.\n\nResume Text: ${resumeText.substring(0, 3000)}`;
         
         if (jobDescription) {
           prompt += `\n\nAdditionally, compare it against this job description and provide a match percentage and missing skills:\n${jobDescription.substring(0, 1000)}`;
         }
 
-        const result = await model.generateContent(prompt);
-        aiFeedback = result.response.text();
+        aiFeedback = await generateWithRetry(prompt);
       } catch (aiError) {
         console.error('AI Analysis Failed:', aiError.message);
         aiFeedback = "AI analysis is currently unavailable. Please try again later.";
