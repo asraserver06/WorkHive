@@ -4,7 +4,6 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const mongoSanitize = require('express-mongo-sanitize');
 
 // Route imports
 const authRoutes = require('./routes/authRoutes');
@@ -19,8 +18,23 @@ const app = express();
 
 // ── Middleware ────────────────────────────────────────────────
 app.use(helmet());
-app.use(mongoSanitize());
 app.use(express.json());
+app.use((req, _res, next) => {
+  const sanitize = (value) => {
+    if (!value || typeof value !== 'object') return;
+
+    for (const key of Object.keys(value)) {
+      if (key.startsWith('$') || key.includes('.')) {
+        delete value[key];
+      } else {
+        sanitize(value[key]);
+      }
+    }
+  };
+
+  sanitize(req.body);
+  next();
+});
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

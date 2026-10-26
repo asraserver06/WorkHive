@@ -31,7 +31,7 @@ exports.analyzeResume = async (req, res) => {
     
     if (process.env.GEMINI_API_KEY) {
       try {
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
         
         let prompt = `Analyze the following resume text. Extract the key skills, experience level, and provide 3 brief bullet points of constructive feedback to improve it.\n\nResume Text: ${resumeText.substring(0, 3000)}`;
         
@@ -42,8 +42,8 @@ exports.analyzeResume = async (req, res) => {
         const result = await model.generateContent(prompt);
         aiFeedback = result.response.text();
       } catch (aiError) {
-        console.error('AI Analysis Failed:', aiError);
-        aiFeedback = "AI analysis is currently unavailable. Please verify your Gemini API key.";
+        console.error('AI Analysis Failed:', aiError.message);
+        aiFeedback = "AI analysis is currently unavailable. Please try again later.";
       }
     } else {
       aiFeedback = "Gemini API key is not configured. Please add GEMINI_API_KEY to your .env file to enable AI analysis.";
